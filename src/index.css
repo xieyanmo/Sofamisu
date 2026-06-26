@@ -1,0 +1,38 @@
+@import "tailwindcss";
+
+body {
+  font-family: "Neue Haas Grotesk", Inter, sans-serif;
+}
+
+.cart-drawer-scroll {
+  scrollbar-color: transparent transparent;
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
+}
+
+.cart-drawer-scroll-active {
+  scrollbar-color: rgb(190 139 72 / 0.75) transparent;
+  scrollbar-width: thin;
+}
+
+.cart-drawer-scroll::-webkit-scrollbar {
+  width: 5px;
+}
+
+.cart-drawer-scroll-active::-webkit-scrollbar {
+  width: 5px;
+}
+
+.cart-drawer-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.cart-drawer-scroll::-webkit-scrollbar-thumb {
+  background-color: transparent;
+  border-radius: 999px;
+}
+
+.cart-drawer-scroll-active::-webkit-scrollbar-thumb {
+  background-color: rgb(190 139 72 / 0.75);
+  border-radius: 999px;
+}
