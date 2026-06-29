@@ -1,4 +1,4 @@
-import { useRef, useState, useMemo } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useCart } from '../context/CartContext'
 import { shopifyProducts } from '../data/shopifyProducts'
 import type { ProductColorVariant } from '../types/Product'
@@ -20,6 +20,23 @@ const getTouchDistance = (touches: React.TouchList) => {
     firstTouch.clientY - secondTouch.clientY,
   )
 }
+
+const getTouchMidpoint = (touches: React.TouchList) => {
+  const firstTouch = touches[0]
+  const secondTouch = touches[1]
+
+  if (!firstTouch || !secondTouch) {
+    return { x: 0, y: 0 }
+  }
+
+  return {
+    x: (firstTouch.clientX + secondTouch.clientX) / 2,
+    y: (firstTouch.clientY + secondTouch.clientY) / 2,
+  }
+}
+
+const clamp = (value: number, min: number, max: number) =>
+  Math.min(max, Math.max(min, value))
 
 function AccordionTriangle({ isOpen }: { isOpen: boolean }) {
   return (
@@ -141,11 +158,72 @@ export function ProductDetail({ handle }: ProductDetailProps) {
   const [mobileCartSuccessMessage, setMobileCartSuccessMessage] = useState('')
   const [isMobileCartSuccessVisible, setIsMobileCartSuccessVisible] =
     useState(false)
+  const productImageButtonRef = useRef<HTMLButtonElement | null>(null)
+  const viewerFrameRef = useRef<HTMLDivElement | null>(null)
   const imageSwipeRef = useRef(false)
+  const imageTouchStartRef = useRef({ x: 0, y: 0 })
+  const imageGestureLockRef = useRef<'horizontal' | 'vertical' | null>(null)
   const viewerGestureRef = useRef(false)
   const pinchStartDistanceRef = useRef(0)
   const pinchStartScaleRef = useRef(1)
+  const pinchStartImagePointRef = useRef({ x: 0, y: 0 })
   const panStartRef = useRef({ touchX: 0, touchY: 0, x: 0, y: 0 })
+
+  useEffect(() => {
+    if (!isImageViewerOpen) {
+      return
+    }
+
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+
+    return () => {
+      document.body.style.overflow = previousOverflow
+    }
+  }, [isImageViewerOpen])
+
+  useEffect(() => {
+    const imageButton = productImageButtonRef.current
+
+    if (!imageButton) {
+      return
+    }
+
+    const handleTouchMove = (event: TouchEvent) => {
+      const touch = event.touches[0]
+
+      if (!touch) {
+        return
+      }
+
+      const deltaX = touch.clientX - imageTouchStartRef.current.x
+      const deltaY = touch.clientY - imageTouchStartRef.current.y
+      const absX = Math.abs(deltaX)
+      const absY = Math.abs(deltaY)
+
+      if (!imageGestureLockRef.current && Math.max(absX, absY) > 10) {
+        if (absX > absY * 1.2) {
+          imageGestureLockRef.current = 'horizontal'
+        }
+
+        if (absY > absX * 1.2) {
+          imageGestureLockRef.current = 'vertical'
+        }
+      }
+
+      if (imageGestureLockRef.current === 'horizontal') {
+        event.preventDefault()
+      }
+    }
+
+    imageButton.addEventListener('touchmove', handleTouchMove, {
+      passive: false,
+    })
+
+    return () => {
+      imageButton.removeEventListener('touchmove', handleTouchMove)
+    }
+  }, [])
 
   if (!product) {
     return <ProductNotFound />
@@ -173,24 +251,32 @@ export function ProductDetail({ handle }: ProductDetailProps) {
       current === selectedColor.images.length - 1 ? 0 : current + 1,
     )
   }
-  const handleImageTouchEnd = (endX: number) => {
+  const handleImageTouchEnd = (endX: number, endY: number) => {
     if (imageTouchStartX === null) {
       return
     }
 
     const swipeDistance = endX - imageTouchStartX
+    const verticalDistance = endY - imageTouchStartRef.current.y
 
-    if (swipeDistance > 48) {
+    if (
+      imageGestureLockRef.current === 'horizontal' &&
+      Math.abs(swipeDistance) > 48 &&
+      Math.abs(swipeDistance) > Math.abs(verticalDistance) * 1.2
+    ) {
       imageSwipeRef.current = true
+    }
+
+    if (imageSwipeRef.current && swipeDistance > 48) {
       showPreviousImage()
     }
 
-    if (swipeDistance < -48) {
-      imageSwipeRef.current = true
+    if (imageSwipeRef.current && swipeDistance < -48) {
       showNextImage()
     }
 
     setImageTouchStartX(null)
+    imageGestureLockRef.current = null
   }
   const handleImageClick = () => {
     if (imageSwipeRef.current) {
@@ -242,8 +328,43 @@ export function ProductDetail({ handle }: ProductDetailProps) {
     setViewerTouchStartY(null)
     viewerGestureRef.current = false
   }
+  const getClampedViewerTranslate = (
+    nextTranslate: { x: number; y: number },
+    nextScale: number,
+  ) => {
+    const frame = viewerFrameRef.current
+
+    if (!frame || nextScale <= 1) {
+      return { x: 0, y: 0 }
+    }
+
+    const maxX = ((nextScale - 1) * frame.clientWidth) / 2
+    const maxY = ((nextScale - 1) * frame.clientHeight) / 2
+
+    return {
+      x: clamp(nextTranslate.x, -maxX, maxX),
+      y: clamp(nextTranslate.y, -maxY, maxY),
+    }
+  }
   const handleViewerTouchStart = (event: React.TouchEvent<HTMLDivElement>) => {
     if (event.touches.length === 2) {
+      event.preventDefault()
+      const frame = viewerFrameRef.current
+      const midpoint = getTouchMidpoint(event.touches)
+
+      if (frame) {
+        const rect = frame.getBoundingClientRect()
+        const relativeMidpoint = {
+          x: midpoint.x - rect.left - rect.width / 2,
+          y: midpoint.y - rect.top - rect.height / 2,
+        }
+
+        pinchStartImagePointRef.current = {
+          x: (relativeMidpoint.x - viewerTranslate.x) / viewerScale,
+          y: (relativeMidpoint.y - viewerTranslate.y) / viewerScale,
+        }
+      }
+
       pinchStartDistanceRef.current = getTouchDistance(event.touches)
       pinchStartScaleRef.current = viewerScale
       viewerGestureRef.current = true
@@ -271,10 +392,18 @@ export function ProductDetail({ handle }: ProductDetailProps) {
 
       const startDistance = pinchStartDistanceRef.current
 
-      if (startDistance === 0) {
+      const frame = viewerFrameRef.current
+
+      if (startDistance === 0 || !frame) {
         return
       }
 
+      const midpoint = getTouchMidpoint(event.touches)
+      const rect = frame.getBoundingClientRect()
+      const relativeMidpoint = {
+        x: midpoint.x - rect.left - rect.width / 2,
+        y: midpoint.y - rect.top - rect.height / 2,
+      }
       const nextScale = Math.min(
         3,
         Math.max(
@@ -283,12 +412,20 @@ export function ProductDetail({ handle }: ProductDetailProps) {
             (getTouchDistance(event.touches) / startDistance),
         ),
       )
+      const nextTranslate = getClampedViewerTranslate(
+        {
+          x:
+            relativeMidpoint.x -
+            pinchStartImagePointRef.current.x * nextScale,
+          y:
+            relativeMidpoint.y -
+            pinchStartImagePointRef.current.y * nextScale,
+        },
+        nextScale,
+      )
 
       setViewerScale(nextScale)
-
-      if (nextScale === 1) {
-        setViewerTranslate({ x: 0, y: 0 })
-      }
+      setViewerTranslate(nextTranslate)
 
       viewerGestureRef.current = true
       return
@@ -305,10 +442,15 @@ export function ProductDetail({ handle }: ProductDetailProps) {
 
     if (viewerScale > 1) {
       event.preventDefault()
-      setViewerTranslate({
-        x: panStartRef.current.x + touch.clientX - panStartRef.current.touchX,
-        y: panStartRef.current.y + touch.clientY - panStartRef.current.touchY,
-      })
+      setViewerTranslate(
+        getClampedViewerTranslate(
+          {
+            x: panStartRef.current.x + touch.clientX - panStartRef.current.touchX,
+            y: panStartRef.current.y + touch.clientY - panStartRef.current.touchY,
+          },
+          viewerScale,
+        ),
+      )
       viewerGestureRef.current = true
       return
     }
@@ -319,6 +461,10 @@ export function ProductDetail({ handle }: ProductDetailProps) {
     }
   }
   const handleViewerTouchEnd = (event: React.TouchEvent<HTMLDivElement>) => {
+    if (event.touches.length === 0 && viewerScale <= 1) {
+      setViewerTranslate({ x: 0, y: 0 })
+    }
+
     if (viewerTouchStartX === null || viewerScale > 1) {
       return
     }
@@ -375,8 +521,8 @@ export function ProductDetail({ handle }: ProductDetailProps) {
           / {product.title}
         </nav>
 
-        <div className="mt-8 grid gap-8 lg:mt-10 lg:gap-[50px] lg:grid-cols-[7fr_5fr]">
-          <div className="grid items-start gap-4 lg:grid-cols-[9rem_1fr] lg:gap-6">
+        <div className="mt-8 grid gap-8 lg:mt-10 lg:grid-cols-[minmax(0,7fr)_minmax(20rem,5fr)] lg:gap-8">
+          <div className="grid min-w-0 items-start gap-4 lg:grid-cols-[6rem_minmax(0,1fr)] lg:gap-6 xl:grid-cols-[7rem_minmax(0,1fr)]">
             <div className="order-2 overflow-x-auto overflow-y-hidden lg:order-1 lg:max-h-[850px] lg:overflow-x-hidden lg:overflow-y-visible">
               <div className="flex gap-3 overflow-x-auto overflow-y-hidden pb-1 [scrollbar-color:rgba(190,139,72,0.5)_transparent] [scrollbar-width:none] hover:[scrollbar-width:thin] lg:max-h-[850px] lg:flex-col lg:gap-12 lg:overflow-y-auto lg:overflow-x-hidden lg:pr-2 [&::-webkit-scrollbar]:h-0 [&::-webkit-scrollbar]:w-0 hover:[&::-webkit-scrollbar]:h-1.5 hover:[&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-[#BE8B48]/50">
               {selectedColor.images.map((image, index) => (
@@ -386,7 +532,7 @@ export function ProductDetail({ handle }: ProductDetailProps) {
                   onClick={() => {
                     setSelectedImageIndex(index)
                   }}
-                  className="group relative aspect-square h-20 w-20 shrink-0 overflow-hidden rounded-[16px] border border-transparent bg-[#EAE4DB] transition-colors duration-200 lg:h-29 lg:w-29"
+                  className="group relative aspect-square h-20 w-20 shrink-0 overflow-hidden rounded-[16px] border border-transparent bg-[#EAE4DB] transition-colors duration-200 lg:h-20 lg:w-20 xl:h-24 xl:w-24"
                 >
                   <img
                     src={image.url}
@@ -404,19 +550,33 @@ export function ProductDetail({ handle }: ProductDetailProps) {
               </div>
             </div>
 
-            <div className="group relative order-1 aspect-square w-full overflow-hidden rounded-[16px] bg-[#EAE4DB] lg:order-2 lg:h-[850px] lg:w-[1000px]">
+            <div className="group relative order-1 aspect-square w-full min-w-0 overflow-hidden rounded-[16px] bg-[#EAE4DB] lg:order-2">
               <button
+                ref={productImageButtonRef}
                 type="button"
                 onClick={handleImageClick}
-                onTouchStart={(event) =>
+                onTouchStart={(event) => {
+                  const touch = event.touches[0]
+                  imageTouchStartRef.current = {
+                    x: touch?.clientX ?? 0,
+                    y: touch?.clientY ?? 0,
+                  }
+                  imageGestureLockRef.current = null
+                  imageSwipeRef.current = false
                   setImageTouchStartX(event.touches[0]?.clientX ?? null)
-                }
+                }}
                 onTouchEnd={(event) =>
                   handleImageTouchEnd(
                     event.changedTouches[0]?.clientX ?? imageTouchStartX ?? 0,
+                    event.changedTouches[0]?.clientY ??
+                      imageTouchStartRef.current.y,
                   )
                 }
-                className="h-full w-full overflow-hidden lg:cursor-zoom-in"
+                onTouchCancel={() => {
+                  setImageTouchStartX(null)
+                  imageGestureLockRef.current = null
+                }}
+                className="h-full w-full touch-pan-y overflow-hidden overscroll-contain lg:cursor-zoom-in"
                 aria-label="Open product image viewer"
               >
                 <img
@@ -617,8 +777,21 @@ export function ProductDetail({ handle }: ProductDetailProps) {
           }}
           className="fixed inset-0 z-[80] flex flex-col items-center justify-center bg-[#944E25] px-0 py-8 text-[#F7F4EF]"
         >
+          <button
+            type="button"
+            aria-label="Close product image viewer"
+            onClick={(event) => {
+              event.stopPropagation()
+              closeImageViewer()
+            }}
+            className="absolute top-5 left-5 z-10 grid h-11 w-11 place-items-center rounded-full font-['Neue_Haas_Grotesk','Inter',sans-serif] text-3xl font-light text-[#F7F4EF] transition-colors duration-200 hover:bg-[#744026] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#BE8B48]"
+          >
+            {'<'}
+          </button>
+
           <div className="w-screen">
             <div
+              ref={viewerFrameRef}
               onTouchStart={handleViewerTouchStart}
               onTouchMove={handleViewerTouchMove}
               onTouchEnd={handleViewerTouchEnd}

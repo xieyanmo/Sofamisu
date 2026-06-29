@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { ProductCard } from '../components/ProductCard'
 import { siteContent } from '../content/siteContent'
 import { shopifyProducts } from '../data/shopifyProducts'
@@ -69,6 +69,24 @@ export function Collections() {
         : [...current, option],
     )
   }
+  const resetFilters = () => {
+    setMaxPrice(9000)
+    setSelectedSort('Featured')
+    setSelectedSeatingCapacity([])
+  }
+
+  useEffect(() => {
+    if (!isFilterOpen) {
+      return
+    }
+
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+
+    return () => {
+      document.body.style.overflow = previousOverflow
+    }
+  }, [isFilterOpen])
 
   const handleFilterTouchEnd = (endX: number, endY: number) => {
     if (filterTouchStartX === null) {
@@ -138,7 +156,7 @@ export function Collections() {
           <button
             type="button"
             onClick={() => setIsFilterOpen(true)}
-            className="relative pb-1.5 font-['Neue_Haas_Grotesk','Inter',sans-serif] text-sm font-light tracking-[0.18em] text-[#005A4F] before:absolute before:bottom-1 before:left-0 before:h-px before:w-full before:origin-left before:scale-x-0 before:bg-[#BE8B48] before:transition-transform before:duration-300 before:ease-out after:absolute after:bottom-0 after:left-0 after:h-px after:w-full after:origin-left after:scale-x-0 after:bg-[#BE8B48] after:transition-transform after:duration-300 after:ease-out hover:before:scale-x-100 hover:after:scale-x-100 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#BE8B48]"
+            className="relative pt-1 pb-1.5 font-['Neue_Haas_Grotesk','Inter',sans-serif] text-sm font-light tracking-[0.18em] text-[#005A4F] before:absolute before:bottom-1 before:left-0 before:h-px before:w-full before:origin-left before:scale-x-0 before:bg-[#BE8B48] before:transition-transform before:duration-300 before:ease-out after:absolute after:bottom-0 after:left-0 after:h-px after:w-full after:origin-left after:scale-x-0 after:bg-[#BE8B48] after:transition-transform after:duration-300 after:ease-out hover:before:scale-x-100 hover:after:scale-x-100 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#BE8B48]"
           >
             {siteContent.collections.filterSortLabel}
           </button>
@@ -188,7 +206,7 @@ export function Collections() {
       <aside
         aria-label="Filter and sort drawer"
         aria-modal="true"
-        className={`fixed top-0 right-0 z-[70] h-dvh w-full max-w-md bg-[#F7F4EF]/75 px-8 py-8 text-[#3A1C0F] shadow-2xl transition-transform duration-500 ease-out ${
+        className={`fixed top-0 right-0 z-[70] flex h-dvh w-full max-w-md flex-col overscroll-contain bg-[#F7F4EF]/75 px-8 py-8 text-[#3A1C0F] shadow-2xl transition-transform duration-500 ease-out ${
           isFilterOpen ? 'translate-x-0' : 'translate-x-full'
         }`}
         onTouchStart={(event) => {
@@ -288,6 +306,23 @@ export function Collections() {
               )
             })}
           </div>
+        </div>
+
+        <div className="mt-auto border-t border-[#BE8B48]/30 pt-5">
+          <button
+            type="button"
+            onClick={() => setIsFilterOpen(false)}
+            className="w-full rounded-[16px] bg-[#944E25] px-6 py-4 font-['Neue_Haas_Grotesk','Inter',sans-serif] text-sm font-light tracking-[0.18em] text-[#F7F4EF] transition-colors duration-200 hover:bg-[#744026] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#BE8B48]"
+          >
+            Apply Filter
+          </button>
+          <button
+            type="button"
+            onClick={resetFilters}
+            className="mt-3 w-full rounded-[16px] border border-[#944E25] px-6 py-4 font-['Neue_Haas_Grotesk','Inter',sans-serif] text-sm font-light tracking-[0.18em] text-[#944E25] transition-colors duration-200 hover:bg-[#EAE4DB] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#BE8B48]"
+          >
+            Reset Filter
+          </button>
         </div>
       </aside>
     </main>

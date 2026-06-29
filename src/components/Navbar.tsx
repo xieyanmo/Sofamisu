@@ -184,6 +184,19 @@ export function Navbar({ forceShrunk = false }: NavbarProps) {
     }
   }, [])
 
+  useEffect(() => {
+    if (!isCartDrawerOpen) {
+      return
+    }
+
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+
+    return () => {
+      document.body.style.overflow = previousOverflow
+    }
+  }, [isCartDrawerOpen])
+
   const handleCartListScroll = () => {
     setIsCartListScrolling(true)
 
@@ -302,7 +315,7 @@ export function Navbar({ forceShrunk = false }: NavbarProps) {
       )}
       <aside
         aria-label="Cart drawer"
-        className={`fixed right-0 z-[60] flex w-full max-w-2xl flex-col overflow-hidden rounded-l-[16px] bg-[#EAE4DB]/75 px-8 py-8 text-[#3A1C0F] shadow-2xl transition-[clip-path] duration-500 ease-out ${
+        className={`fixed right-0 z-[60] flex w-full max-w-2xl flex-col overscroll-contain overflow-hidden rounded-l-[16px] bg-[#EAE4DB]/75 px-8 py-8 text-[#3A1C0F] shadow-2xl transition-[clip-path] duration-500 ease-out ${
           isCartDrawerOpen
             ? '[clip-path:inset(0_0_0_0)]'
             : '[clip-path:inset(0_0_100%_0)]'

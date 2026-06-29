@@ -36,3 +36,42 @@ body {
   background-color: rgb(190 139 72 / 0.75);
   border-radius: 999px;
 }
+
+@media (hover: none) and (pointer: coarse) {
+  button,
+  a:not(:has(img)) {
+    -webkit-tap-highlight-color: transparent;
+    border-radius: 6px;
+    transition-property: background-color, filter, color, border-color, transform;
+    transition-duration: 150ms;
+    transition-timing-function: ease-out;
+  }
+
+  a:not(:has(img)) {
+    box-decoration-break: clone;
+    -webkit-box-decoration-break: clone;
+    padding-inline: 0.35rem;
+    padding-block: 0.08rem 0.02rem;
+  }
+
+  button:active,
+  a:not(:has(img)):active {
+    background-color: rgb(58 28 15 / 0.06);
+    color: rgb(58 28 15);
+    filter: brightness(0.96);
+  }
+}
+
+.product-card-overlay {
+  opacity: 1;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .product-card-overlay {
+    opacity: 0;
+  }
+
+  .group:hover .product-card-overlay {
+    opacity: 1;
+  }
+}

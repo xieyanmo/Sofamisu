@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import customColorIcon from '../assets/custom_color.png'
 import freeDeliveryIcon from '../assets/free_delivery.png'
 import heroImage from '../assets/hero_s1.jpg'
@@ -72,6 +72,10 @@ export function Home() {
   const [mobileTouchStartX, setMobileTouchStartX] = useState<number | null>(
     null,
   )
+  const mobileCarouselRef = useRef<HTMLAnchorElement | null>(null)
+  const mobileTouchStartRef = useRef({ x: 0, y: 0 })
+  const mobileGestureLockRef = useRef<'horizontal' | 'vertical' | null>(null)
+  const mobileDidSwipeRef = useRef(false)
   const shouldShowFeaturedControls = featuredProducts.length > 3
   const mobileFeaturedIndex =
     featuredProducts.length > 0
@@ -124,22 +128,32 @@ export function Home() {
       (current) => (current + 1) % (featuredProducts.length * 2),
     )
   }
-  const handleMobileTouchEnd = (endX: number) => {
+  const handleMobileTouchEnd = (endX: number, endY: number) => {
     if (mobileTouchStartX === null) {
       return
     }
 
     const swipeDistance = endX - mobileTouchStartX
+    const verticalDistance = endY - mobileTouchStartRef.current.y
 
-    if (swipeDistance > 48) {
+    if (
+      mobileGestureLockRef.current === 'horizontal' &&
+      Math.abs(swipeDistance) > 48 &&
+      Math.abs(swipeDistance) > Math.abs(verticalDistance) * 1.2
+    ) {
+      mobileDidSwipeRef.current = true
+    }
+
+    if (mobileDidSwipeRef.current && swipeDistance > 48) {
       showPreviousMobileProduct()
     }
 
-    if (swipeDistance < -48) {
+    if (mobileDidSwipeRef.current && swipeDistance < -48) {
       showNextMobileProduct()
     }
 
     setMobileTouchStartX(null)
+    mobileGestureLockRef.current = null
   }
 
   useEffect(() => {
@@ -152,6 +166,49 @@ export function Home() {
     }, 3000)
 
     return () => window.clearInterval(imageRotation)
+  }, [])
+
+  useEffect(() => {
+    const carouselElement = mobileCarouselRef.current
+
+    if (!carouselElement) {
+      return
+    }
+
+    const handleTouchMove = (event: TouchEvent) => {
+      const touch = event.touches[0]
+
+      if (!touch) {
+        return
+      }
+
+      const deltaX = touch.clientX - mobileTouchStartRef.current.x
+      const deltaY = touch.clientY - mobileTouchStartRef.current.y
+      const absX = Math.abs(deltaX)
+      const absY = Math.abs(deltaY)
+
+      if (!mobileGestureLockRef.current && Math.max(absX, absY) > 10) {
+        if (absX > absY * 1.2) {
+          mobileGestureLockRef.current = 'horizontal'
+        }
+
+        if (absY > absX * 1.2) {
+          mobileGestureLockRef.current = 'vertical'
+        }
+      }
+
+      if (mobileGestureLockRef.current === 'horizontal') {
+        event.preventDefault()
+      }
+    }
+
+    carouselElement.addEventListener('touchmove', handleTouchMove, {
+      passive: false,
+    })
+
+    return () => {
+      carouselElement.removeEventListener('touchmove', handleTouchMove)
+    }
   }, [])
 
   return (
@@ -171,7 +228,7 @@ export function Home() {
         </div>
 
         <div className="border-y border-[#BE8B48]/30 bg-[#EAE4DB] px-6 py-8 md:px-20 md:py-10">
-          <div className="grid w-full grid-cols-2 gap-5 md:grid-cols-2 md:gap-6 lg:grid-cols-4">
+          <div className="grid w-full grid-cols-2 gap-5 md:grid-cols-2 md:gap-6 xl:grid-cols-4">
             {siteContent.keyBenefits.map((benefit) => {
               const icon = benefitIcons[benefit.iconName]
 
@@ -261,19 +318,39 @@ export function Home() {
               <article className="md:hidden">
                 <div>
                   <a
+                    ref={mobileCarouselRef}
                     href={`/products/${mobileFeaturedProduct.handle}`}
                     aria-label={`View ${mobileFeaturedProduct.title}`}
-                    className="block"
-                    onTouchStart={(event) =>
+                    className="block touch-pan-y overscroll-contain"
+                    onClick={(event) => {
+                      if (mobileDidSwipeRef.current) {
+                        event.preventDefault()
+                        mobileDidSwipeRef.current = false
+                      }
+                    }}
+                    onTouchStart={(event) => {
+                      const touch = event.touches[0]
+                      mobileTouchStartRef.current = {
+                        x: touch?.clientX ?? 0,
+                        y: touch?.clientY ?? 0,
+                      }
+                      mobileGestureLockRef.current = null
+                      mobileDidSwipeRef.current = false
                       setMobileTouchStartX(event.touches[0]?.clientX ?? null)
-                    }
+                    }}
                     onTouchEnd={(event) =>
                       handleMobileTouchEnd(
                         event.changedTouches[0]?.clientX ??
                           mobileTouchStartX ??
                           0,
+                        event.changedTouches[0]?.clientY ??
+                          mobileTouchStartRef.current.y,
                       )
                     }
+                    onTouchCancel={() => {
+                      setMobileTouchStartX(null)
+                      mobileGestureLockRef.current = null
+                    }}
                   >
                     <div className="relative aspect-square w-full overflow-hidden rounded-[16px] bg-[#EAE4DB]">
                       {mobileFeaturedImages.map((image, index) => (

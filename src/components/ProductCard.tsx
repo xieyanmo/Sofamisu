@@ -34,7 +34,7 @@ export function ProductCard({
             className="absolute inset-0 h-full w-full object-cover object-center opacity-0 transition-opacity duration-500 ease-out group-hover:opacity-100"
           />
           {showImageOverlayDetails && (
-            <div className="absolute inset-0 flex flex-col justify-end bg-[linear-gradient(180deg,rgba(58,28,15,0)_0%,rgba(58,28,15,0.76)_100%)] p-5 opacity-100 transition-opacity delay-300 duration-500 ease-out md:p-8 md:opacity-0 md:group-hover:opacity-100">
+            <div className="product-card-overlay absolute inset-0 flex flex-col justify-end bg-[linear-gradient(180deg,rgba(58,28,15,0)_0%,rgba(58,28,15,0.76)_100%)] p-5 transition-opacity delay-300 duration-500 ease-out md:p-8">
               <h2 className="font-['Neue_Haas_Grotesk','Inter',sans-serif] text-xl font-semibold text-[#F7F4EF] md:text-2xl">
                 {product.title}
               </h2>
