@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import customColorIcon from '../assets/custom_color.png'
 import freeDeliveryIcon from '../assets/free_delivery.png'
 import heroImage from '../assets/hero_s1.jpg'
@@ -17,7 +17,7 @@ const benefitIcons = {
     src: customColorIcon,
   },
   free_delivery: {
-    imageClassName: 'max-h-[130px] max-w-[130px]',
+    imageClassName: 'max-h-20 max-w-20 md:max-h-[130px] md:max-w-[130px]',
     src: freeDeliveryIcon,
   },
   secure_deposit: {
@@ -68,7 +68,24 @@ function ArrowHoverFrame() {
 
 export function Home() {
   const [featuredStartIndex, setFeaturedStartIndex] = useState(0)
+  const [mobileFeaturedStep, setMobileFeaturedStep] = useState(0)
+  const [mobileTouchStartX, setMobileTouchStartX] = useState<number | null>(
+    null,
+  )
   const shouldShowFeaturedControls = featuredProducts.length > 3
+  const mobileFeaturedIndex =
+    featuredProducts.length > 0
+      ? Math.floor(mobileFeaturedStep / 2) % featuredProducts.length
+      : 0
+  const mobileImageIndex = mobileFeaturedStep % 2
+  const mobileFeaturedProduct =
+    featuredProducts[mobileFeaturedIndex % featuredProducts.length]
+  const mobileFeaturedImages = mobileFeaturedProduct
+    ? [
+        mobileFeaturedProduct.images[0] ?? mobileFeaturedProduct.featuredImage,
+        mobileFeaturedProduct.images[1] ?? mobileFeaturedProduct.hoverImage,
+      ]
+    : []
   const visibleFeaturedProducts = Array.from(
     { length: Math.min(3, featuredProducts.length) },
     (_, index) =>
@@ -82,10 +99,64 @@ export function Home() {
   const showNextFeaturedProducts = () => {
     setFeaturedStartIndex((current) => (current + 1) % featuredProducts.length)
   }
+  const showPreviousMobileProduct = () => {
+    setMobileFeaturedStep((current) => {
+      const currentProduct = Math.floor(current / 2) % featuredProducts.length
+      const previousProduct =
+        currentProduct === 0 ? featuredProducts.length - 1 : currentProduct - 1
+
+      return previousProduct * 2
+    })
+  }
+  const showNextMobileProduct = () => {
+    setMobileFeaturedStep((current) => {
+      const currentProduct = Math.floor(current / 2) % featuredProducts.length
+      const nextProduct = (currentProduct + 1) % featuredProducts.length
+
+      return nextProduct * 2
+    })
+  }
+  const selectMobileProduct = (productIndex: number) => {
+    setMobileFeaturedStep(productIndex * 2)
+  }
+  const showNextMobileFeaturedStep = () => {
+    setMobileFeaturedStep(
+      (current) => (current + 1) % (featuredProducts.length * 2),
+    )
+  }
+  const handleMobileTouchEnd = (endX: number) => {
+    if (mobileTouchStartX === null) {
+      return
+    }
+
+    const swipeDistance = endX - mobileTouchStartX
+
+    if (swipeDistance > 48) {
+      showPreviousMobileProduct()
+    }
+
+    if (swipeDistance < -48) {
+      showNextMobileProduct()
+    }
+
+    setMobileTouchStartX(null)
+  }
+
+  useEffect(() => {
+    if (featuredProducts.length === 0) {
+      return
+    }
+
+    const imageRotation = window.setInterval(() => {
+      showNextMobileFeaturedStep()
+    }, 3000)
+
+    return () => window.clearInterval(imageRotation)
+  }, [])
 
   return (
     <main className="bg-[#F7F4EF] text-[#3A1C0F]">
-      <section className="flex h-[calc(100vh-183px)] min-h-[620px] flex-col">
+      <section className="flex h-[calc(100dvh-112px)] flex-col md:h-[calc(100vh-183px)] md:min-h-[620px]">
         <div
           aria-label={siteContent.hero.imageLabel}
           className="relative min-h-0 flex-1 overflow-hidden bg-[#EAE4DB]"
@@ -99,28 +170,28 @@ export function Home() {
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_22%_36%,rgba(190,139,72,0.24),transparent_34%)]" />
         </div>
 
-        <div className="border-y border-[#BE8B48]/30 bg-[#EAE4DB] px-20 py-10">
-          <div className="grid w-full grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="border-y border-[#BE8B48]/30 bg-[#EAE4DB] px-6 py-8 md:px-20 md:py-10">
+          <div className="grid w-full grid-cols-2 gap-5 md:grid-cols-2 md:gap-6 lg:grid-cols-4">
             {siteContent.keyBenefits.map((benefit) => {
               const icon = benefitIcons[benefit.iconName]
 
               return (
               <div
                 key={benefit.text}
-                className="flex items-center justify-center gap-6 text-[#744026]"
+                className="flex flex-col items-center justify-center gap-3 text-center text-[#744026] md:flex-row md:gap-6 md:text-left"
               >
-                <span className="flex h-[132px] w-[132px] shrink-0 items-center justify-center">
+                <span className="flex h-20 w-20 shrink-0 items-center justify-center md:h-[132px] md:w-[132px]">
                   <img
                     src={icon.src}
                     alt=""
                     className={`h-auto w-auto object-contain ${
                       'imageClassName' in icon
                         ? icon.imageClassName
-                        : 'max-h-[108px] max-w-[108px]'
+                        : 'max-h-16 max-w-16 md:max-h-[108px] md:max-w-[108px]'
                     }`}
                   />
                 </span>
-                <span className="max-w-[180px] whitespace-pre-line text-left font-['Neue_Haas_Grotesk','Inter',sans-serif] text-base font-light leading-7 tracking-[0.16em]">
+                <span className="max-w-[150px] whitespace-pre-line font-['Neue_Haas_Grotesk','Inter',sans-serif] text-xs font-light leading-5 tracking-[0.1em] md:max-w-[180px] md:text-base md:leading-7 md:tracking-[0.16em]">
                   {benefit.text}
                 </span>
               </div>
@@ -130,20 +201,20 @@ export function Home() {
         </div>
       </section>
 
-      <section className="min-h-screen bg-[#F7F4EF] px-6 pt-20 pb-28 lg:px-20">
+      <section className="min-h-screen bg-[#F7F4EF] px-6 pt-14 pb-24 md:pt-20 md:pb-28 lg:px-20">
         <div className="mx-auto flex w-full flex-col items-center">
-          <h1 className="font-['Neue_Haas_Grotesk','Inter',sans-serif] text-5xl font-light text-[#944E25]">
+          <h1 className="font-['Neue_Haas_Grotesk','Inter',sans-serif] text-4xl font-light text-[#944E25] md:text-5xl">
             {siteContent.featuredProducts.sectionTitle}
           </h1>
 
-          <div className="relative mt-16 w-full px-[88px]">
+          <div className="relative mt-10 w-full px-0 md:mt-16 md:px-[88px]">
             {shouldShowFeaturedControls && (
               <>
                 <button
                   type="button"
                   aria-label="Show previous featured products"
                   onClick={showPreviousFeaturedProducts}
-                  className="group absolute top-1/2 left-0 z-10 grid h-16 w-16 -translate-y-1/2 place-items-center text-[#944E25] transition-colors duration-200 hover:text-[#744026] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#BE8B48]"
+                  className="group absolute top-1/2 left-0 z-10 hidden h-16 w-16 -translate-y-1/2 place-items-center text-[#944E25] transition-colors duration-200 hover:text-[#744026] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#BE8B48] md:grid"
                 >
                   <ArrowHoverFrame />
                   <svg
@@ -165,7 +236,7 @@ export function Home() {
                   type="button"
                   aria-label="Show next featured products"
                   onClick={showNextFeaturedProducts}
-                  className="group absolute top-1/2 right-0 z-10 grid h-16 w-16 -translate-y-1/2 place-items-center text-[#944E25] transition-colors duration-200 hover:text-[#744026] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#BE8B48]"
+                  className="group absolute top-1/2 right-0 z-10 hidden h-16 w-16 -translate-y-1/2 place-items-center text-[#944E25] transition-colors duration-200 hover:text-[#744026] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#BE8B48] md:grid"
                 >
                   <ArrowHoverFrame />
                   <svg
@@ -186,7 +257,76 @@ export function Home() {
               </>
             )}
 
-            <div className="grid w-full grid-cols-1 gap-8 md:grid-cols-3">
+            {mobileFeaturedProduct && (
+              <article className="md:hidden">
+                <div>
+                  <a
+                    href={`/products/${mobileFeaturedProduct.handle}`}
+                    aria-label={`View ${mobileFeaturedProduct.title}`}
+                    className="block"
+                    onTouchStart={(event) =>
+                      setMobileTouchStartX(event.touches[0]?.clientX ?? null)
+                    }
+                    onTouchEnd={(event) =>
+                      handleMobileTouchEnd(
+                        event.changedTouches[0]?.clientX ??
+                          mobileTouchStartX ??
+                          0,
+                      )
+                    }
+                  >
+                    <div className="relative aspect-square w-full overflow-hidden rounded-[16px] bg-[#EAE4DB]">
+                      {mobileFeaturedImages.map((image, index) => (
+                        <img
+                          key={image.id}
+                          src={image.url}
+                          alt={image.altText}
+                          className={`absolute inset-0 h-full w-full object-cover object-center transition-opacity duration-700 ease-out ${
+                            mobileImageIndex === index
+                              ? 'opacity-100'
+                              : 'opacity-0'
+                          }`}
+                        />
+                      ))}
+                      <div className="absolute inset-0 flex flex-col justify-end bg-[linear-gradient(180deg,rgba(58,28,15,0)_0%,rgba(58,28,15,0.76)_100%)] p-5">
+                        <h2 className="font-['Neue_Haas_Grotesk','Inter',sans-serif] text-xl font-semibold text-[#F7F4EF]">
+                          {mobileFeaturedProduct.title}
+                        </h2>
+                        <p className="mt-2 max-w-sm font-['Neue_Haas_Grotesk','Inter',sans-serif] text-xs leading-5 font-light text-[#F7F4EF]/90">
+                          {mobileFeaturedProduct.description}
+                        </p>
+                        <p className="mt-4 font-['Neue_Haas_Grotesk','Inter',sans-serif] text-xs font-light tracking-[0.16em] text-[#BE8B48]">
+                          ${mobileFeaturedProduct.price.toLocaleString()}
+                        </p>
+                      </div>
+                    </div>
+                  </a>
+                  <div
+                    aria-label="Featured product position"
+                    className="mt-5 flex items-center justify-center gap-2"
+                  >
+                    {featuredProducts.map((product, index) => (
+                      <button
+                        key={product.id}
+                        type="button"
+                        aria-label={`Show featured product ${index + 1}`}
+                        aria-current={
+                          index === mobileFeaturedIndex ? 'true' : undefined
+                        }
+                        onClick={() => selectMobileProduct(index)}
+                        className={`h-2 rounded-full transition-[width,background-color] duration-300 ease-out ${
+                          index === mobileFeaturedIndex
+                            ? 'w-7 bg-[#944E25]'
+                            : 'w-2 bg-[#BE8B48]/45'
+                        }`}
+                      />
+                    ))}
+                  </div>
+                </div>
+              </article>
+            )}
+
+            <div className="hidden w-full grid-cols-1 gap-8 md:grid md:grid-cols-3">
               {visibleFeaturedProducts.map((product) => (
                 <ProductCard
                   key={product.id}

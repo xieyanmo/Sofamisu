@@ -18,9 +18,11 @@ function AccordionTriangle({ isOpen }: { isOpen: boolean }) {
         />
         <path
           d="M11.35 14h17.3L20 28.98 11.35 14Z"
+          fill={isOpen ? 'currentColor' : 'transparent'}
           stroke="currentColor"
           strokeLinejoin="round"
           strokeWidth="1"
+          className="transition-[fill] duration-300 ease-out"
         />
       </svg>
     </span>
@@ -43,7 +45,15 @@ function FAQItem({
         onClick={() => setIsOpen((current) => !current)}
         className="flex w-full items-center justify-between gap-8 py-6 text-left font-['Neue_Haas_Grotesk','Inter',sans-serif] text-base font-light text-[#3A1C0F]"
       >
-        {question}
+        <span
+          className={`relative pb-1.5 before:absolute before:bottom-1 before:left-0 before:h-px before:w-full before:origin-left before:bg-[#BE8B48] before:transition-transform before:duration-300 before:ease-out after:absolute after:bottom-0 after:left-0 after:h-px after:w-full after:origin-left after:bg-[#BE8B48] after:transition-transform after:duration-300 after:ease-out ${
+            isOpen
+              ? 'before:scale-x-100 after:scale-x-100'
+              : 'before:scale-x-0 after:scale-x-0'
+          }`}
+        >
+          {question}
+        </span>
         <AccordionTriangle isOpen={isOpen} />
       </button>
       {isOpen && (
@@ -57,13 +67,19 @@ function FAQItem({
 
 export function FAQ() {
   return (
-    <main className="-mt-[95px] min-h-screen bg-[#F7F4EF] px-6 pt-12 pb-24 text-[#3A1C0F] lg:px-20">
+    <main className="min-h-screen bg-[#F7F4EF] px-6 pt-12 pb-24 text-[#3A1C0F] lg:px-20">
       <section className="mx-auto w-full">
         <nav
           aria-label="Breadcrumb"
-          className="mb-5 font-['Neue_Haas_Grotesk','Inter',sans-serif] text-sm font-light tracking-[0.14em] text-[#744026]"
+          className="mb-5 font-['Neue_Haas_Grotesk','Inter',sans-serif] text-xs font-light tracking-[0.1em] text-[#744026] md:text-sm md:tracking-[0.14em]"
         >
-          {siteContent.faq.breadcrumb.join(' / ')}
+          <a
+            href="/"
+            className="relative pb-1.5 before:absolute before:bottom-1 before:left-0 before:h-px before:w-full before:origin-left before:scale-x-0 before:bg-[#BE8B48] before:transition-transform before:duration-300 before:ease-out after:absolute after:bottom-0 after:left-0 after:h-px after:w-full after:origin-left after:scale-x-0 after:bg-[#BE8B48] after:transition-transform after:duration-300 after:ease-out hover:text-[#944E25] hover:before:scale-x-100 hover:after:scale-x-100"
+          >
+            {siteContent.faq.breadcrumb[0]}
+          </a>{' '}
+          / {siteContent.faq.breadcrumb[1]}
         </nav>
 
         <h1 className="font-['Neue_Haas_Grotesk','Inter',sans-serif] text-5xl font-light text-[#944E25]">

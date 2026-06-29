@@ -8,12 +8,31 @@ const seatingCapacityOptions = ['1 Seater', '2 Seater', '3+ Seater']
 
 export function Collections() {
   const [isFilterOpen, setIsFilterOpen] = useState(false)
+  const [filterTouchStartX, setFilterTouchStartX] = useState<number | null>(
+    null,
+  )
+  const [filterTouchStartY, setFilterTouchStartY] = useState<number | null>(
+    null,
+  )
   const [maxPrice, setMaxPrice] = useState(9000)
   const [selectedSort, setSelectedSort] = useState('Featured')
   const [selectedSeatingCapacity, setSelectedSeatingCapacity] = useState<
     string[]
   >([])
   const hasPriceFilter = maxPrice < 9000
+  const filteredProducts = shopifyProducts
+    .filter((product) => product.price <= maxPrice)
+    .toSorted((firstProduct, secondProduct) => {
+      if (selectedSort === 'Price: Low to High') {
+        return firstProduct.price - secondProduct.price
+      }
+
+      if (selectedSort === 'Price: High to Low') {
+        return secondProduct.price - firstProduct.price
+      }
+
+      return 0
+    })
   const activeFilterChips = [
     ...(hasPriceFilter
       ? [
@@ -51,16 +70,65 @@ export function Collections() {
     )
   }
 
+  const handleFilterTouchEnd = (endX: number, endY: number) => {
+    if (filterTouchStartX === null) {
+      return
+    }
+
+    const swipeDistance = endX - filterTouchStartX
+    const verticalSwipeDistance =
+      filterTouchStartY === null ? 0 : endY - filterTouchStartY
+
+    if (!isFilterOpen && swipeDistance < -60) {
+      setIsFilterOpen(true)
+    }
+
+    if (
+      isFilterOpen &&
+      (swipeDistance > 60 || Math.abs(verticalSwipeDistance) > 60)
+    ) {
+      setIsFilterOpen(false)
+    }
+
+    setFilterTouchStartX(null)
+    setFilterTouchStartY(null)
+  }
+
   return (
-    <main className="-mt-[95px] min-h-screen bg-[#F7F4EF] px-6 pt-12 pb-24 text-[#3A1C0F] lg:px-20">
+    <main
+      className="min-h-screen bg-[#F7F4EF] px-6 pt-12 pb-24 text-[#3A1C0F] lg:px-20"
+      onTouchStart={(event) => {
+        setFilterTouchStartX(event.touches[0]?.clientX ?? null)
+        setFilterTouchStartY(event.touches[0]?.clientY ?? null)
+      }}
+      onTouchEnd={(event) =>
+        handleFilterTouchEnd(
+          event.changedTouches[0]?.clientX ?? filterTouchStartX ?? 0,
+          event.changedTouches[0]?.clientY ?? filterTouchStartY ?? 0,
+        )
+      }
+    >
       <section className="mx-auto w-full">
         <nav
           aria-label="Breadcrumb"
-          className="mb-5 font-['Neue_Haas_Grotesk','Inter',sans-serif] text-sm font-light tracking-[0.14em] text-[#744026]"
+          className="mb-5 font-['Neue_Haas_Grotesk','Inter',sans-serif] text-xs font-light tracking-[0.1em] text-[#744026] md:text-sm md:tracking-[0.14em]"
         >
-          {siteContent.collections.breadcrumb.join(' / ')}
+          <a
+            href="/"
+            className="relative pb-1.5 before:absolute before:bottom-1 before:left-0 before:h-px before:w-full before:origin-left before:scale-x-0 before:bg-[#BE8B48] before:transition-transform before:duration-300 before:ease-out after:absolute after:bottom-0 after:left-0 after:h-px after:w-full after:origin-left after:scale-x-0 after:bg-[#BE8B48] after:transition-transform after:duration-300 after:ease-out hover:text-[#944E25] hover:before:scale-x-100 hover:after:scale-x-100"
+          >
+            {siteContent.collections.breadcrumb[0]}
+          </a>{' '}
+          /{' '}
+          <a
+            href="/collections"
+            className="relative pb-1.5 before:absolute before:bottom-1 before:left-0 before:h-px before:w-full before:origin-left before:scale-x-0 before:bg-[#BE8B48] before:transition-transform before:duration-300 before:ease-out after:absolute after:bottom-0 after:left-0 after:h-px after:w-full after:origin-left after:scale-x-0 after:bg-[#BE8B48] after:transition-transform after:duration-300 after:ease-out hover:text-[#944E25] hover:before:scale-x-100 hover:after:scale-x-100"
+          >
+            {siteContent.collections.breadcrumb[1]}
+          </a>{' '}
+          / {siteContent.collections.breadcrumb[2]}
         </nav>
-        <h1 className="font-['Neue_Haas_Grotesk','Inter',sans-serif] text-5xl font-light text-[#944E25]">
+        <h1 className="font-['Neue_Haas_Grotesk','Inter',sans-serif] text-4xl font-light text-[#944E25] md:text-5xl">
           {siteContent.collections.pageTitle}
         </h1>
         <p className="mt-5 max-w-2xl font-['Neue_Haas_Grotesk','Inter',sans-serif] text-base font-light leading-7 text-[#744026]">
@@ -97,8 +165,13 @@ export function Collections() {
           )}
         </div>
 
+        <p className="font-['Neue_Haas_Grotesk','Inter',sans-serif] text-sm font-light tracking-[0.12em] text-[#744026]">
+          {filteredProducts.length}{' '}
+          {filteredProducts.length === 1 ? 'product' : 'products'} shown
+        </p>
+
         <div className="mt-10 grid grid-cols-1 gap-x-8 gap-y-14 sm:grid-cols-2 lg:grid-cols-4">
-          {shopifyProducts.map((product) => (
+          {filteredProducts.map((product) => (
             <ProductCard key={product.id} product={product} />
           ))}
         </div>
@@ -106,7 +179,7 @@ export function Collections() {
 
       <div
         aria-hidden={!isFilterOpen}
-        className={`fixed inset-0 z-[60] bg-[#3A1C0F]/25 transition-opacity duration-300 ${
+        className={`fixed inset-0 z-[60] bg-[#3A1C0F]/25 backdrop-blur-sm transition-opacity duration-300 ${
           isFilterOpen ? 'opacity-100' : 'pointer-events-none opacity-0'
         }`}
         onClick={() => setIsFilterOpen(false)}
@@ -115,9 +188,19 @@ export function Collections() {
       <aside
         aria-label="Filter and sort drawer"
         aria-modal="true"
-        className={`fixed top-0 right-0 z-[70] h-dvh w-full max-w-md bg-[#F7F4EF] px-8 py-8 text-[#3A1C0F] shadow-2xl transition-transform duration-500 ease-out ${
+        className={`fixed top-0 right-0 z-[70] h-dvh w-full max-w-md bg-[#F7F4EF]/75 px-8 py-8 text-[#3A1C0F] shadow-2xl transition-transform duration-500 ease-out ${
           isFilterOpen ? 'translate-x-0' : 'translate-x-full'
         }`}
+        onTouchStart={(event) => {
+          setFilterTouchStartX(event.touches[0]?.clientX ?? null)
+          setFilterTouchStartY(event.touches[0]?.clientY ?? null)
+        }}
+        onTouchEnd={(event) =>
+          handleFilterTouchEnd(
+            event.changedTouches[0]?.clientX ?? filterTouchStartX ?? 0,
+            event.changedTouches[0]?.clientY ?? filterTouchStartY ?? 0,
+          )
+        }
         role="dialog"
       >
         <div className="flex items-center justify-between gap-6">

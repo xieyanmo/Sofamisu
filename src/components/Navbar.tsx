@@ -9,7 +9,7 @@ function ContactIcon() {
   return (
     <svg
       aria-hidden="true"
-      className="h-[30px] w-[30px]"
+      className="h-6 w-6 md:h-[30px] md:w-[30px]"
       fill="none"
       viewBox="0 0 24 24"
       stroke="currentColor"
@@ -28,7 +28,7 @@ function AccountIcon() {
   return (
     <svg
       aria-hidden="true"
-      className="h-[30px] w-[30px]"
+      className="h-6 w-6 md:h-[30px] md:w-[30px]"
       fill="none"
       viewBox="0 0 24 24"
       stroke="currentColor"
@@ -47,7 +47,7 @@ function CartIcon() {
   return (
     <svg
       aria-hidden="true"
-      className="h-[30px] w-[30px]"
+      className="h-6 w-6 md:h-[30px] md:w-[30px]"
       fill="none"
       viewBox="0 0 24 24"
       stroke="currentColor"
@@ -95,15 +95,34 @@ function IconHoverFrame() {
 function IconButton({
   label,
   children,
+  className = '',
+  href,
+  hidden = false,
 }: {
   label: string
   children: ReactNode
+  className?: string
+  href?: string
+  hidden?: boolean
 }) {
-  return (
+  const buttonClassName = `group relative grid h-10 w-10 place-items-center rounded-[14px] text-[#944E25] transition-colors duration-200 hover:text-[#744026] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#BE8B48] md:h-12 md:w-12 md:rounded-[16px] ${className}`
+
+  return href ? (
+    <a
+      href={href}
+      aria-label={label}
+      hidden={hidden}
+      className={buttonClassName}
+    >
+      <IconHoverFrame />
+      {children}
+    </a>
+  ) : (
     <button
       type="button"
       aria-label={label}
-      className="group relative grid h-12 w-12 place-items-center rounded-[16px] text-[#944E25] transition-colors duration-200 hover:text-[#744026] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#BE8B48]"
+      hidden={hidden}
+      className={buttonClassName}
     >
       <IconHoverFrame />
       {children}
@@ -121,6 +140,7 @@ export function Navbar({ forceShrunk = false }: NavbarProps) {
   const [hasScrolled, setHasScrolled] = useState(false)
   const [isCartDrawerOpen, setIsCartDrawerOpen] = useState(false)
   const [isCartListScrolling, setIsCartListScrolling] = useState(false)
+  const [cartTouchStartX, setCartTouchStartX] = useState<number | null>(null)
   const cartScrollTimeoutRef = useRef<number | null>(null)
   const isShrunk = forceShrunk || hasScrolled
   const navbarHeight = isShrunk ? 88 : 183
@@ -175,13 +195,24 @@ export function Navbar({ forceShrunk = false }: NavbarProps) {
       setIsCartListScrolling(false)
     }, 800)
   }
+  const handleCartTouchEnd = (endX: number) => {
+    if (cartTouchStartX === null) {
+      return
+    }
+
+    if (Math.abs(endX - cartTouchStartX) > 60) {
+      setIsCartDrawerOpen(false)
+    }
+
+    setCartTouchStartX(null)
+  }
 
   return (
     <>
       <header className="fixed top-0 right-0 left-0 z-50 w-full text-[#3A1C0F]">
         <div
           className={`w-full overflow-hidden bg-[#F7F4EF] transition-[height] duration-500 ease-out ${
-            isShrunk ? 'h-[88px]' : 'h-[183px]'
+            isShrunk ? 'h-[72px] md:h-[88px]' : 'h-[112px] md:h-[183px]'
           }`}
         >
           <div className="h-4 w-full bg-[#944E25]">
@@ -192,47 +223,53 @@ export function Navbar({ forceShrunk = false }: NavbarProps) {
 
           <nav
             aria-label="Primary navigation"
-            className={`mx-auto grid w-full max-w-[96rem] grid-cols-[1fr_auto_1fr] px-6 transition-[min-height,padding] duration-500 ease-out lg:px-8 ${
-              isShrunk ? 'min-h-14 py-2' : 'min-h-32 py-8'
+            className={`mx-auto grid w-full max-w-[96rem] grid-cols-[auto_1fr_auto] items-center px-4 transition-[min-height,padding] duration-500 ease-out md:grid-cols-[1fr_auto_1fr] md:px-6 lg:px-8 ${
+              isShrunk
+                ? 'min-h-12 pt-2 pb-0 md:min-h-14 md:py-2'
+                : 'min-h-20 pt-5 pb-1 md:min-h-32 md:py-8'
             }`}
           >
             <a
               href="/"
               aria-label="Sofamisu home"
-              className="flex items-center justify-self-start"
+              className="flex translate-y-1 items-center justify-self-start md:translate-y-0"
             >
               <img
                 src={isShrunk ? logoPic : logo}
                 alt={siteContent.navbar.logoAlt}
                 className={`w-auto object-contain transition-all duration-500 ease-out ${
-                  isShrunk ? 'h-10' : 'h-[103px]'
+                  isShrunk ? 'h-5 md:h-10' : 'h-7 md:h-[103px]'
                 }`}
               />
             </a>
 
             <div
-              className={`hidden gap-20 transition-all duration-500 ease-out md:flex ${
+              className={`flex min-w-0 translate-y-1 items-center justify-center gap-3 self-center transition-all duration-500 ease-out md:gap-20 ${
                 isShrunk
-                  ? 'translate-y-4 items-center self-center'
-                  : 'translate-y-3 items-end self-end'
+                  ? 'md:translate-y-4 md:items-center md:self-center'
+                  : 'md:translate-y-3 md:items-end md:self-end'
               }`}
             >
               {siteContent.navbar.links.map((item) => (
                 <a
                   key={item.label}
                   href={item.href}
-                  className="relative pb-1.5 font-['Neue_Haas_Grotesk','Inter',sans-serif] text-base font-light tracking-[0.2em] text-[#005A4F] before:absolute before:bottom-1 before:left-0 before:h-px before:w-full before:origin-left before:scale-x-0 before:bg-[#BE8B48] before:transition-transform before:duration-300 before:ease-out after:absolute after:bottom-0 after:left-0 after:h-px after:w-full after:origin-left after:scale-x-0 after:bg-[#BE8B48] after:transition-transform after:duration-300 after:ease-out hover:before:scale-x-100 hover:after:scale-x-100 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#BE8B48]"
+                  className="relative pb-1.5 font-['Neue_Haas_Grotesk','Inter',sans-serif] text-sm font-light tracking-[0.1em] text-[#005A4F] before:absolute before:bottom-1 before:left-0 before:h-px before:w-full before:origin-left before:scale-x-0 before:bg-[#BE8B48] before:transition-transform before:duration-300 before:ease-out after:absolute after:bottom-0 after:left-0 after:h-px after:w-full after:origin-left after:scale-x-0 after:bg-[#BE8B48] after:transition-transform after:duration-300 after:ease-out hover:before:scale-x-100 hover:after:scale-x-100 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#BE8B48] md:text-base md:tracking-[0.2em]"
                 >
                   {item.label}
                 </a>
               ))}
             </div>
 
-            <div className="flex items-center justify-self-end gap-3">
-              <IconButton label={siteContent.navbar.icons.contact}>
+            <div className="flex translate-y-1 items-center justify-self-end gap-1 md:translate-y-0 md:gap-3">
+              <IconButton label={siteContent.navbar.icons.contact} hidden>
                 <ContactIcon />
               </IconButton>
-              <IconButton label={siteContent.navbar.icons.account}>
+              <IconButton
+                label={siteContent.navbar.icons.account}
+                href="/login"
+                hidden
+              >
                 <AccountIcon />
               </IconButton>
               <div className="relative">
@@ -240,7 +277,7 @@ export function Navbar({ forceShrunk = false }: NavbarProps) {
                   type="button"
                   aria-label={siteContent.navbar.icons.cart}
                   onClick={() => setIsCartDrawerOpen((current) => !current)}
-                  className="group relative grid h-12 w-12 place-items-center rounded-[16px] text-[#944E25] transition-colors duration-200 hover:text-[#744026] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#BE8B48]"
+                  className="group relative grid h-10 w-10 place-items-center rounded-[14px] text-[#944E25] transition-colors duration-200 hover:text-[#744026] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#BE8B48] md:h-12 md:w-12 md:rounded-[16px]"
                 >
                   <IconHoverFrame />
                   <CartIcon />
@@ -260,12 +297,12 @@ export function Navbar({ forceShrunk = false }: NavbarProps) {
           type="button"
           aria-label="Close cart overlay"
           onClick={() => setIsCartDrawerOpen(false)}
-          className="fixed inset-0 z-[55] cursor-default bg-[#3A1C0F]/45"
+          className="fixed inset-0 z-[55] cursor-default bg-[#3A1C0F]/45 backdrop-blur-sm"
         />
       )}
       <aside
         aria-label="Cart drawer"
-        className={`fixed right-0 z-[60] flex w-full max-w-2xl flex-col overflow-hidden rounded-l-[16px] bg-[#EAE4DB] px-8 py-8 text-[#3A1C0F] shadow-2xl transition-[clip-path] duration-500 ease-out ${
+        className={`fixed right-0 z-[60] flex w-full max-w-2xl flex-col overflow-hidden rounded-l-[16px] bg-[#EAE4DB]/75 px-8 py-8 text-[#3A1C0F] shadow-2xl transition-[clip-path] duration-500 ease-out ${
           isCartDrawerOpen
             ? '[clip-path:inset(0_0_0_0)]'
             : '[clip-path:inset(0_0_100%_0)]'
@@ -274,8 +311,19 @@ export function Navbar({ forceShrunk = false }: NavbarProps) {
           top: `${navbarHeight}px`,
           height: `calc(100dvh - ${navbarHeight}px)`,
         }}
+        onTouchStart={(event) =>
+          setCartTouchStartX(event.touches[0]?.clientX ?? null)
+        }
+        onTouchEnd={(event) =>
+          handleCartTouchEnd(
+            event.changedTouches[0]?.clientX ?? cartTouchStartX ?? 0,
+          )
+        }
       >
-        <div className="flex items-center justify-between">
+        <div
+          className="flex items-center justify-between"
+          onClick={() => setIsCartDrawerOpen(false)}
+        >
           <h2 className="font-['Neue_Haas_Grotesk','Inter',sans-serif] text-2xl font-light text-[#944E25]">
             Cart
           </h2>
@@ -318,8 +366,10 @@ export function Navbar({ forceShrunk = false }: NavbarProps) {
                         <p className="text-sm font-semibold leading-tight text-[#944E25]">
                           {item.productTitle}
                         </p>
-                        <p className="mt-0 flex items-center gap-2 text-xs font-light leading-tight text-[#744026]">
-                        <span className="w-36">Color: {item.colorName}</span>
+                      <div className="mt-0 flex flex-col items-start gap-2 text-xs font-light leading-tight text-[#744026]">
+                        <span className="w-36 truncate whitespace-nowrap">
+                          Color: {item.colorName}
+                        </span>
                         {item.colorSwatchImage ? (
                           <img
                             src={item.colorSwatchImage}
@@ -335,7 +385,7 @@ export function Navbar({ forceShrunk = false }: NavbarProps) {
                             />
                           )
                         )}
-                      </p>
+                      </div>
                     </div>
                   </div>
                   <div className="text-right font-['Neue_Haas_Grotesk','Inter',sans-serif]">
@@ -409,7 +459,10 @@ export function Navbar({ forceShrunk = false }: NavbarProps) {
           </div>
         )}
       </aside>
-      <div aria-hidden="true" className="h-[183px] w-full" />
+      <div
+        aria-hidden="true"
+        className={`w-full ${isShrunk ? 'h-[72px] md:h-[88px]' : 'h-[112px] md:h-[183px]'}`}
+      />
     </>
   )
 }
