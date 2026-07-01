@@ -5,6 +5,7 @@ import heroImage from '../assets/hero_s1.jpg'
 import madeToOrderIcon from '../assets/made_to_order.png'
 import secureDepositIcon from '../assets/secure_deposit.png'
 import { ProductCard } from '../components/ProductCard'
+import { ProductImage } from '../components/ProductImage'
 import { siteContent } from '../content/siteContent'
 import {
   featuredProductHandles,
@@ -354,7 +355,7 @@ export function Home() {
                   >
                     <div className="relative aspect-square w-full overflow-hidden rounded-[16px] bg-[#EAE4DB]">
                       {mobileFeaturedImages.map((image, index) => (
-                        <img
+                        <ProductImage
                           key={image.id}
                           src={image.url}
                           alt={image.altText}

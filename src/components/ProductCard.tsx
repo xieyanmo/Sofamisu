@@ -1,4 +1,5 @@
 import type { Product } from '../types/Product'
+import { ProductImage } from './ProductImage'
 
 type ProductCardProps = {
   imageClassName?: string
@@ -23,12 +24,12 @@ export function ProductCard({
         <div
           className={`group relative w-full overflow-hidden rounded-[16px] bg-[#EAE4DB] ${imageClassName}`}
         >
-          <img
+          <ProductImage
             src={product.featuredImage.url}
             alt={product.featuredImage.altText}
             className="absolute inset-0 h-full w-full object-cover object-center opacity-100 transition-opacity duration-500 ease-out group-hover:opacity-0"
           />
-          <img
+          <ProductImage
             src={product.hoverImage.url}
             alt={product.hoverImage.altText}
             className="absolute inset-0 h-full w-full object-cover object-center opacity-0 transition-opacity duration-500 ease-out group-hover:opacity-100"

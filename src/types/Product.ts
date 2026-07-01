@@ -15,6 +15,7 @@ export type ProductVariant = {
 }
 
 export type ProductColorVariant = {
+  code: string
   id: string
   images: ProductImage[]
   name: string
@@ -29,6 +30,7 @@ export type Product = {
   compareAtPrice: number | null
   description: string
   featuredImage: ProductImage
+  generatedProductId: string
   handle: string
   hoverImage: ProductImage
   id: string

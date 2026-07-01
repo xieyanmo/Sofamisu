@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "generate:products": "node scripts/generate-products.js",
     "lint": "oxlint",
     "preview": "vite preview"
   },

@@ -1,10 +1,26 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { ProductImage as ProductImageView } from '../components/ProductImage'
 import { useCart } from '../context/CartContext'
+import { generatedProducts } from '../data/generatedProducts.js'
+import { masterData } from '../data/masterData.js'
+import { createProductImagesFromFolder } from '../data/productAssets'
 import { shopifyProducts } from '../data/shopifyProducts'
 import type { ProductColorVariant } from '../types/Product'
 
 type ProductDetailProps = {
   handle: string
+}
+
+type MaterialOption = {
+  id: string
+  label: string
+  icon: 'vintage' | 'natural' | 'fabric'
+}
+
+const materialIconMap: Record<string, MaterialOption['icon']> = {
+  FB: 'fabric',
+  NL: 'natural',
+  VL: 'vintage',
 }
 
 const getTouchDistance = (touches: React.TouchList) => {
@@ -63,6 +79,94 @@ function AccordionTriangle({ isOpen }: { isOpen: boolean }) {
         />
       </svg>
     </span>
+  )
+}
+
+function MaterialIcon({ icon }: { icon: MaterialOption['icon'] }) {
+  if (icon === 'natural') {
+    return (
+      <svg
+        aria-hidden="true"
+        className="h-7 w-7"
+        fill="none"
+        viewBox="0 0 32 32"
+        stroke="currentColor"
+        strokeWidth="1"
+      >
+        <path
+          d="M7.5 20.5c8.5.5 14.6-4.8 17-13.8 1.8 9.2-2.1 17.5-10.6 18.4-3 .3-5.4-1.1-6.4-4.6Z"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+        <path
+          d="M10.1 20.2c3.9-2.5 7.4-5.8 10.7-10"
+          strokeLinecap="round"
+        />
+      </svg>
+    )
+  }
+
+  if (icon === 'fabric') {
+    return (
+      <svg
+        aria-hidden="true"
+        className="h-7 w-7"
+        fill="none"
+        viewBox="0 0 32 32"
+        stroke="currentColor"
+        strokeWidth="1"
+      >
+        <path d="M8 8h16v16H8z" strokeLinejoin="round" />
+        <path d="M12 8v16M16 8v16M20 8v16M8 12h16M8 16h16M8 20h16" />
+      </svg>
+    )
+  }
+
+  return (
+    <svg
+      aria-hidden="true"
+      className="h-7 w-7"
+      fill="none"
+      viewBox="0 0 32 32"
+      stroke="currentColor"
+      strokeWidth="1"
+    >
+      <path
+        d="M9.2 8.5c2.8-2 4.9 1.5 7 .7 2.4-.9 4.2-2.2 6.3.1 1.7 1.9-.1 4.3 1.2 6.4 1.2 2 3.7 3.8 2 6.1-1.8 2.5-5.1.3-7.3 1.6-2.4 1.4-3.8 4-6.4 2.3-2.2-1.4-.9-4.8-2.6-6.6-1.8-1.9-5.3-2.4-4.7-5.3.5-2.7 3-3.5 4.5-5.3Z"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path d="M10.5 14.5h7.8M9.8 18.3h10.7" strokeLinecap="round" />
+    </svg>
+  )
+}
+
+function ColorSwatch({
+  fallbackColor,
+  swatch,
+}: {
+  fallbackColor: string
+  swatch: string
+}) {
+  const [hasImageError, setHasImageError] = useState(false)
+
+  if (hasImageError || !swatch) {
+    return (
+      <span
+        aria-hidden="true"
+        className="block h-full w-full rounded-full border border-[#BE8B48]/40"
+        style={{ backgroundColor: fallbackColor }}
+      />
+    )
+  }
+
+  return (
+    <img
+      src={swatch}
+      alt=""
+      onError={() => setHasImageError(true)}
+      className="h-full w-full rounded-[6px] object-cover object-center lg:rounded-[8px]"
+    />
   )
 }
 
@@ -146,6 +250,8 @@ export function ProductDetail({ handle }: ProductDetailProps) {
     [handle],
   )
   const [selectedColorId, setSelectedColorId] = useState<string | null>(null)
+  const [selectedMaterialId, setSelectedMaterialId] = useState<string | null>(null)
+  const [selectedSizeId, setSelectedSizeId] = useState<string | null>(null)
   const [selectedImageIndex, setSelectedImageIndex] = useState(0)
   const [quantity, setQuantity] = useState(1)
   const [isImageViewerOpen, setIsImageViewerOpen] = useState(false)
@@ -168,6 +274,26 @@ export function ProductDetail({ handle }: ProductDetailProps) {
   const pinchStartScaleRef = useRef(1)
   const pinchStartImagePointRef = useRef({ x: 0, y: 0 })
   const panStartRef = useRef({ touchX: 0, touchY: 0, x: 0, y: 0 })
+  const generatedProduct = product
+    ? generatedProducts[product.generatedProductId]
+    : undefined
+  const materialOptions = useMemo(
+    () =>
+      (generatedProduct?.materials ?? []).map((material) => ({
+        id: material,
+        icon: materialIconMap[material] ?? 'vintage',
+        label: masterData.materials[material]?.label ?? material,
+      })),
+    [generatedProduct],
+  )
+  const sizeOptions = useMemo(
+    () =>
+      (generatedProduct?.sizes ?? []).map((size) => ({
+        id: size,
+        label: size,
+      })),
+    [generatedProduct],
+  )
 
   useEffect(() => {
     if (!isImageViewerOpen) {
@@ -225,6 +351,46 @@ export function ProductDetail({ handle }: ProductDetailProps) {
     }
   }, [])
 
+  useEffect(() => {
+    if (materialOptions.length === 0) {
+      setSelectedMaterialId(null)
+      return
+    }
+
+    if (
+      !selectedMaterialId ||
+      !materialOptions.some((material) => material.id === selectedMaterialId)
+    ) {
+      setSelectedMaterialId(materialOptions[0].id)
+    }
+  }, [materialOptions, selectedMaterialId])
+
+  useEffect(() => {
+    if (sizeOptions.length === 0) {
+      setSelectedSizeId(null)
+      return
+    }
+
+    if (!selectedSizeId || !sizeOptions.some((size) => size.id === selectedSizeId)) {
+      setSelectedSizeId(sizeOptions[0].id)
+    }
+  }, [selectedSizeId, sizeOptions])
+
+  useEffect(() => {
+    if (!product || product.colorVariants.length === 0) {
+      setSelectedColorId(null)
+      return
+    }
+
+    if (
+      !selectedColorId ||
+      !product.colorVariants.some((color) => color.id === selectedColorId)
+    ) {
+      setSelectedColorId(product.colorVariants[0].id)
+      setSelectedImageIndex(0)
+    }
+  }, [product, selectedColorId])
+
   if (!product) {
     return <ProductNotFound />
   }
@@ -232,7 +398,24 @@ export function ProductDetail({ handle }: ProductDetailProps) {
   const selectedColor =
     product.colorVariants.find((color) => color.id === selectedColorId) ??
     product.colorVariants[0]
-  const selectedImage = selectedColor.images[selectedImageIndex]
+  const selectedMaterial =
+    materialOptions.find((material) => material.id === selectedMaterialId) ??
+    materialOptions[0]
+  const selectedSize =
+    sizeOptions.find((size) => size.id === selectedSizeId) ?? sizeOptions[0]
+  const selectedImageBasePath =
+    generatedProduct && selectedMaterial && selectedSize && selectedColor
+      ? (generatedProduct.imageBasePaths[selectedMaterial.id]?.[selectedSize.id]?.[
+          selectedColor.code
+        ] ??
+        `/product_picture/${generatedProduct.productId}/${selectedMaterial.id}/${selectedSize.id}/${selectedColor.code}/`)
+      : ''
+  const selectedImages = createProductImagesFromFolder(
+    product.title,
+    selectedImageBasePath,
+  )
+  const selectedImage =
+    selectedImages[selectedImageIndex] ?? selectedImages[0] ?? product.featuredImage
   const depositAmount = product.price * 0.5
 
   const selectColor = (color: ProductColorVariant) => {
@@ -242,13 +425,13 @@ export function ProductDetail({ handle }: ProductDetailProps) {
 
   const showPreviousImage = () => {
     setSelectedImageIndex((current) =>
-      current === 0 ? selectedColor.images.length - 1 : current - 1,
+      current === 0 ? selectedImages.length - 1 : current - 1,
     )
   }
 
   const showNextImage = () => {
     setSelectedImageIndex((current) =>
-      current === selectedColor.images.length - 1 ? 0 : current + 1,
+      current === selectedImages.length - 1 ? 0 : current + 1,
     )
   }
   const handleImageTouchEnd = (endX: number, endY: number) => {
@@ -294,7 +477,7 @@ export function ProductDetail({ handle }: ProductDetailProps) {
       colorName: selectedColor.name,
       colorSwatch: selectedColor.swatchColor,
       colorSwatchImage: selectedColor.swatchImage,
-      image: selectedColor.images[0] ?? selectedImage,
+      image: selectedImages[0] ?? selectedImage,
       price: product.price,
       productHandle: product.handle,
       productTitle: product.title,
@@ -525,7 +708,7 @@ export function ProductDetail({ handle }: ProductDetailProps) {
           <div className="grid min-w-0 items-start gap-4 lg:grid-cols-[6rem_minmax(0,1fr)] lg:gap-6 xl:grid-cols-[7rem_minmax(0,1fr)]">
             <div className="order-2 overflow-x-auto overflow-y-hidden lg:order-1 lg:max-h-[850px] lg:overflow-x-hidden lg:overflow-y-visible">
               <div className="flex gap-3 overflow-x-auto overflow-y-hidden pb-1 [scrollbar-color:rgba(190,139,72,0.5)_transparent] [scrollbar-width:none] hover:[scrollbar-width:thin] lg:max-h-[850px] lg:flex-col lg:gap-12 lg:overflow-y-auto lg:overflow-x-hidden lg:pr-2 [&::-webkit-scrollbar]:h-0 [&::-webkit-scrollbar]:w-0 hover:[&::-webkit-scrollbar]:h-1.5 hover:[&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-[#BE8B48]/50">
-              {selectedColor.images.map((image, index) => (
+              {selectedImages.map((image, index) => (
                 <button
                   key={image.id}
                   type="button"
@@ -534,7 +717,7 @@ export function ProductDetail({ handle }: ProductDetailProps) {
                   }}
                   className="group relative aspect-square h-20 w-20 shrink-0 overflow-hidden rounded-[16px] border border-transparent bg-[#EAE4DB] transition-colors duration-200 lg:h-20 lg:w-20 xl:h-24 xl:w-24"
                 >
-                  <img
+                  <ProductImageView
                     src={image.url}
                     alt={image.altText}
                     className="h-full w-full object-cover object-center"
@@ -576,10 +759,10 @@ export function ProductDetail({ handle }: ProductDetailProps) {
                   setImageTouchStartX(null)
                   imageGestureLockRef.current = null
                 }}
-                className="h-full w-full touch-pan-y overflow-hidden overscroll-contain lg:cursor-zoom-in"
+                className="h-full w-full touch-pan-y overflow-hidden lg:cursor-zoom-in"
                 aria-label="Open product image viewer"
               >
-                <img
+                <ProductImageView
                   src={selectedImage.url}
                   alt={selectedImage.altText}
                   className="h-full w-full object-cover object-center"
@@ -630,13 +813,81 @@ export function ProductDetail({ handle }: ProductDetailProps) {
                         : 'border-transparent'
                     }`}
                   >
-                    <img
-                      src={color.swatchImage}
-                      alt=""
-                        className="h-full w-full rounded-[6px] object-cover object-center lg:rounded-[8px]"
+                    <ColorSwatch
+                      fallbackColor={color.swatchColor}
+                      swatch={color.swatchImage}
                     />
                   </button>
                 ))}
+              </div>
+            </div>
+
+            <div className="mt-5 lg:mt-6">
+              <p className="font-['Neue_Haas_Grotesk','Inter',sans-serif] text-sm font-light tracking-[0.14em] text-[#005A4F]">
+                Material:{' '}
+                <span className="tracking-normal text-[#744026]">
+                  {selectedMaterial.label}
+                </span>
+              </p>
+              <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-3 lg:mt-4">
+                {materialOptions.map((material) => {
+                  const isSelected = selectedMaterialId === material.id
+
+                  return (
+                    <button
+                      key={material.id}
+                      type="button"
+                      aria-pressed={isSelected}
+                      onClick={() => {
+                        setSelectedMaterialId(material.id)
+                        setSelectedImageIndex(0)
+                      }}
+                      className={`flex items-center gap-3 rounded-[12px] border bg-[#F7F4EF] px-4 py-3 text-left font-['Neue_Haas_Grotesk','Inter',sans-serif] text-sm font-light text-[#744026] transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#BE8B48] sm:flex-col sm:items-start sm:gap-2 ${
+                        isSelected
+                          ? 'border-[#944E25] text-[#944E25]'
+                          : 'border-[#BE8B48]/30 hover:border-[#944E25]'
+                      }`}
+                    >
+                      <span className="text-[#944E25]">
+                        <MaterialIcon icon={material.icon} />
+                      </span>
+                      <span>{material.label}</span>
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+
+            <div className="mt-5 lg:mt-6">
+              <p className="font-['Neue_Haas_Grotesk','Inter',sans-serif] text-sm font-light tracking-[0.14em] text-[#005A4F]">
+                Size:{' '}
+                <span className="tracking-normal text-[#744026]">
+                  {selectedSize?.label ?? 'Unavailable'}
+                </span>
+              </p>
+              <div className="mt-3 grid grid-cols-2 gap-2 lg:mt-4">
+                {sizeOptions.map((size) => {
+                  const isSelected = selectedSizeId === size.id
+
+                  return (
+                    <button
+                      key={size.id}
+                      type="button"
+                      aria-pressed={isSelected}
+                      onClick={() => {
+                        setSelectedSizeId(size.id)
+                        setSelectedImageIndex(0)
+                      }}
+                      className={`rounded-[12px] border bg-[#F7F4EF] px-4 py-3 font-['Neue_Haas_Grotesk','Inter',sans-serif] text-sm font-light text-[#744026] transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#BE8B48] ${
+                        isSelected
+                          ? 'border-[#944E25] text-[#944E25]'
+                          : 'border-[#BE8B48]/30 hover:border-[#944E25]'
+                      }`}
+                    >
+                      {size.label}
+                    </button>
+                  )
+                })}
               </div>
             </div>
 
@@ -797,7 +1048,7 @@ export function ProductDetail({ handle }: ProductDetailProps) {
               onTouchEnd={handleViewerTouchEnd}
               className="aspect-square w-screen touch-none overflow-hidden bg-[#EAE4DB]"
             >
-              <img
+              <ProductImageView
                 src={selectedImage.url}
                 alt={selectedImage.altText}
                 className="h-full w-full object-cover object-center"
@@ -812,7 +1063,7 @@ export function ProductDetail({ handle }: ProductDetailProps) {
               aria-label="Product image position"
               className="mt-5 flex items-center justify-center gap-2"
             >
-              {selectedColor.images.map((image, index) => (
+              {selectedImages.map((image, index) => (
                 <button
                   key={image.id}
                   type="button"
